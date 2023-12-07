@@ -134,7 +134,7 @@
 
 ---
 
-# ubuntu-versions
+# Changing ubuntu-versions
 
     apiVersion: apps/v1
     kind: deployment
@@ -193,29 +193,30 @@
               ports:
               - containerPort: 80
 
---- # vim nginx-recreate.yaml
+---
+# vim nginx-recreate.yaml
 
-apiVersion: apps/v1
-kind: deployment
-metadata:
-  name: nginx-recreate
-spec:
-  replicas: 3
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: nginx-recreate
-  template:
-    metadata:
-      labels:
-        app: nginx-recreate
-    spec:
-      containers:
-        - name: nginx-recreate-container
-          image: nginx:latest
-          ports:
-          - containerPort: 80
+        apiVersion: apps/v1
+        kind: deployment
+        metadata:
+          name: nginx-recreate
+        spec:
+          replicas: 3
+          strategy:
+            type: Recreate
+          selector:
+            matchLabels:
+              app: nginx-recreate
+          template:
+            metadata:
+              labels:
+                app: nginx-recreate
+            spec:
+              containers:
+                - name: nginx-recreate-container
+                  image: nginx:latest
+                  ports:
+                  - containerPort: 80
 
 # kubectl apply -f . (Create both the deployments)
 # kubectl get deployments nginx-rolling nginx-recreate
@@ -225,28 +226,29 @@ spec:
 # kubectl get events | grep deployment/nginx-recreate >> dep-events.txt
 # kubectl rollout undo command
 
---- # DaemonSet
-# fluentd.yaml
+---
+# DaemonSet 
+# fluentd
 
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: fluentd
-   namespace: kube-system
-   labels:
-     app: fluentd
-spec:
-  selector:
-    matchLabels:
-      app: fluentd
-  template:
-    metadata: 
-      labeles:
-        app: fluentd
-    spec:
-      containers:
-      - name: fluentd
-        image: fluentd:latest
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata:
+          name: fluentd
+           namespace: kube-system
+           labels:
+             app: fluentd
+        spec:
+          selector:
+            matchLabels:
+              app: fluentd
+          template:
+            metadata: 
+              labeles:
+                app: fluentd
+            spec:
+              containers:
+              - name: fluentd
+                image: fluentd:latest
 
 
 # kubectl apply -f fluentd.yaml
@@ -255,27 +257,28 @@ spec:
 
 
 
---- #  busybox-daemon.yaml
+--- 
+#  busybox-daemon
 
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: busybox-daemon
-   labels:
-     app: bb-daemon
-spec:
-   selector:
-     matchLabels:
-      app: bb-daemon
-   template:
-     metadata:
-       labels:
-         app: bb-daemon
-     spec:
-       containers:
-       - name: busybox-daemon-container
-         image: busybox:latest
-         command: ["sleep", "3600"]
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata:
+          name: busybox-daemon
+           labels:
+             app: bb-daemon
+        spec:
+           selector:
+             matchLabels:
+              app: bb-daemon
+           template:
+             metadata:
+               labels:
+                 app: bb-daemon
+             spec:
+               containers:
+               - name: busybox-daemon-container
+                 image: busybox:latest
+                 command: ["sleep", "3600"]
 
 # kubectl apply -f busybox-daemon.yaml
 # kubectl get daemonsets
@@ -284,48 +287,50 @@ spec:
 # kubectl get pods -l app=bb-daemon
 # kubectl get pods -l app=bb-old-daemon
 
---- # logstash.yaml
+--- 
+# logstash.yaml
 
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: logstash
-  labels:
-    app: logstash
-spec:
-  selector:
-    matchLabels:
-      app: logstash
-  template:
-    metadata:
-      labels:
-        app: logstash
-    spec:
-      containers:
-      - name: logstash-container
-        image: logstash:latest
-        command: ['logstash']
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata:
+          name: logstash
+          labels:
+            app: logstash
+        spec:
+          selector:
+            matchLabels:
+              app: logstash
+          template:
+            metadata:
+              labels:
+                app: logstash
+            spec:
+              containers:
+              - name: logstash-container
+                image: logstash:latest
+                command: ['logstash']
 
 # kubectl apply -f logstash.yaml
 # kubectl get daemonsets logstash
 # kubectl get pods -l app=logstash -o wide
 
 
---- # busy-job.yaml
+--- 
+# busy-job
 
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: busy-job
-spec:
-  template:
-    spec:
-      containers:
-      - name: busy-job-container
-        image: busybox:latest
-        command: ["sh", "-c", "echo i was here"]
-      restartPOlicy: Never
-  backoffLimit: 4
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: busy-job
+        spec:
+          template:
+            spec:
+              containers:
+              - name: busy-job-container
+                image: busybox:latest
+                command: ["sh", "-c", "echo i was here"]
+              restartPOlicy: Never
+          backoffLimit: 4
 
 
 # kubectl apply -f busy-job.yaml
@@ -334,22 +339,23 @@ spec:
 # kubectl logs <pod name>
 
 
---- # pi-job.yaml
+--- 
+# pi-job
 
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: pi-timetolive-job
-spec:
-  ttlSecondsAfterFinished: 300
-  template:
-    spec:
-      containers:
-      - name: pi-timetolive-container
-        image: perl:5.34.0
-        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
-      restartPOlicy: Never
-  
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          name: pi-timetolive-job
+        spec:
+          ttlSecondsAfterFinished: 300
+          template:
+            spec:
+              containers:
+              - name: pi-timetolive-container
+                image: perl:5.34.0
+                command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+              restartPOlicy: Never
+          
 # kubectl apply -f pi-job.yaml
 # kubectl get jobs pi-timetolive-job
 # kubectl get pods pi-timetolive-
@@ -358,30 +364,31 @@ spec:
 # kubectl get jobs pi-timetolive-job (u wont be able to fine=d the pi-timetolive-job resource)
 
 
---- #cron jobs
+---
+# cron jobs
 
 # kubectl get cronjobs 
 # kubectl edit cronjob <name>  (Edit the object definition YAML of busy-cronjob to change the restartPolicy from “OnFailure” to “Never”)
 # kubectl get cronjobs <name> -o yaml | grep restartPolicy
-apiVersion: batch/v1
-kind: cronjob
-metadata:
-  name: my-cronjob
-
-spec:   
-  schedule: "* * * * *"
-  jobTemplate:
-    spec:
-      template:
-        spec: 
-          containers:
-          - name: cronjob-container
-            image: busybox:1.28
-            command:
-            - /bin/sh
-            - -c
-            - date; echo Good Job!!!
-          restartPolicy: OnFailure
+        apiVersion: batch/v1
+        kind: cronjob
+        metadata:
+          name: my-cronjob
+        
+        spec:   
+          schedule: "* * * * *"
+          jobTemplate:
+            spec:
+              template:
+                spec: 
+                  containers:
+                  - name: cronjob-container
+                    image: busybox:1.28
+                    command:
+                    - /bin/sh
+                    - -c
+                    - date; echo Good Job!!!
+                  restartPolicy: OnFailure
 
 
 # kubectl apply -f cron-job.yaml
@@ -418,686 +425,3 @@ spec:
 #(go to node 1 & 2)
 # sudo kubeadm reset
 # paste the join command alongside the internal ip and ca-cert-hash)
-
-
---- # networking
-
-# kubectl get svc --all-namespaces
-# kubectl describe svc kubernetes
-# kubectl describe svc kube-ds --namespaces kube-system
-# kubectl run cip-pod --image nginx:latest --port 80 -l app=net-1
-
---- # nginx-cip.yaml
-
-apiVersion: v1
-kind: Service
-metadata:  
-  name: nginx-service
-spec:
-  selector: 
-    app: net-1
-  ports:
-  - name: http
-    protocol: TCP
-    ports: 8080
-    targetPort: 80
-
-
-# kubectl apply -f nginx-cip.yaml
-# kubectl describe svc nginx-service
-# curl http:// serviceip:8080 (accessable within the cluster)
-
-
---- # endpoints
-# kubectl get endpoints --all-namespaces > endpoints.txt
-
---- # apache httpd pod
-# kubectl run httpd-pod --image=httpd:latest --port 80
-# kubectl get pods htpd-pod
-# kubectl expose pod httpd-pod --type=clusterIP --port 80
-# kubectl get svc httpd-pod
-# curl hptto://<cluster ip>:80
-
---- # nginx-nodeport.yaml
-
-apiVersion: v1
-kind: service
-metadata:  
-  name: nginx-nodeport
-spec:
-  type: NodePort
-  selector:
-    app: net-1
-  ports: 
-  - name: http
-    protocol: TCP
-    port: 8080
-    targetPort: 80
-    nodePort: 30005
-
-
-# kubectl apply -f nginx-nodeport.yaml
-# kubectl get svc
-# <external ip>:30005 (nginx accessable with external ip ie any of 3 ip i.e node or cluster )
-
-
---- # nodeport-httpd.yaml
-
-apiVersion: v1
-kind: service
-metadata:  
-  name: httpd-nodeport
-spec:
-  type: NodePort
-  selector:
-    app: httpd-pod
-  ports: 
-  - name: httpd
-    protocol: TCP
-    port: 8080
-    targetPort: 80
-    nodePort: 30001
-
---- # nginx-alpine.yaml
-
-apiVersion: apps/v1
-kind : deployment
-metadata: 
-  name: nginx-alpine
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: nginx-alpine
-    metadata: 
-      labels:  
-        app: nginx-alpine
-    spec:
-      containers:
-      - name: nginx
-        image: nginx:alpine
-        ports:
-        - containerPort: 80
-
-# kubectl apply -f nginx-alpine.yaml
-# kubectl edit svc httpd-nodeport (Edit the NodePort service object and replace the httpd-pod’s label with the nginx-alpine pod’s label in the service’s selector field) 
-# (This way, the httpd-nodeport service will only expose pods having the label app=nginx-alpine.)
-# http://<ip of any cluster or node>:30001/
-
-
---- # LoadBalancer
-
-# kubctl run nginx-lb --image  nginx:latest --port 80 -l app=lb
-# create loadbalancer in gcp connect with all 3 instance
-# nano nginx-lb.yaml
-
-apiVersion: v1
-kind: service
-metadata:
-  name: nginx-lb
-
-spec:
-  type: LoadBalancer
-  externalIPs:
-  - <load banacerip of gcp>
-  selector:
-    app: lb
-  ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 80
-
-
-# kubectl apply -f nginx-ib.yaml
-# kubectl get svc --watch
-
---- # accessing the dns(domain name system) of k8s objects
-
-# kubectl get pods
-# kubectl get svc
-# ubuntu-dns.ymal
-
-apiVersion: apps/v1
-kind: pod
-metadata:
-  name: ubuntu-dns.ymal
-
-spec:
-  containers:
-  - name: ubuntu-dns
-    image: ubuntu:latest
-    command: ["/bin/sleep", "infinity"]
-
-# kubectl apply -f ubuntu-dns.yaml
-# kubectl exec -it ubuntu-dns --/bin/bash
-# (apt-get update) , (apt install dnsutils curl)
-# (cat /etc/resolv.conf)
-# dig <name server> -x 
-
----
-
-# kubectl get svc -o wide
-# kubectl get pods -l app=redis
-# The syntax for FQDN exposed by a service:
-# <resource-host-name>.<service-name>.<namespace>.svc.cluster.local
-
----
-# kubectl run -it ubuntu-nameserver --image=ubuntu:latest 
-# echo 'google 8.8.8.8' >> /etc/resolv.conf
-   #cat /etc/resolv.conf
-
-
----
-# kubectl expose pod ubuntu-nameserver --name ubuntu-svc --port 8080
-# kubectl get svc ubuntu-svc
-#  nano new-ubuntu.txt   (ubuntu-nameserver.ubuntu-svc.default.svc.cluster.local)
-  #cat new-ubuntu.txt 
-
----
-# kubectl create namespace ubuntu
-# kubectl run -it ubuntu-nameserver --image=ubuntu:latest -n ubuntu
-# kubectl get pods -n ubuntu
-# kubectl expose pod ubuntu-nameserver --port 8082 --name ubuntu-svc-1 -n ubuntu
-# nano similar-fqdn.txt  (ubuntu-nameserver.ubuntu.svc.ubuntu.svc.cluster.local
-                   #       ubuntu-nameserver.ubuntu-svc.default.svc.cluster.local)      )
-# cat similar-fqdn.txt
-
---- # core dns
-# kubectl create namespace core-dns
-# kubectl config set-context --current --namespace core-dns
-# deploy-nginx.yaml
-
-apiVersion: apps/v1
-kind: deployment
-metadata: 
-  name: deploy-nginx
-spec:
-  replicas: 4
-  selectors: 
-    matchLabels:
-      app: nginx
-  template:
-    metadata: 
-      labeles:
-        app: nginx
-    spec:
-      containers:
-      - name: nginx-container
-        image: nginx:latest
-        ports:
-        - containerPort: 80
-
-# kubectl expose deployment deploy-nginx --type NodePort --name nginx-svc
-# nano ubuntu-pod.yaml
-# kubectl create -f ubuntu-pod.yaml
-# curl nginx-svc.core-dns.svc.cluster.local
-
---- 
-
-#kubectl edit -n kube-system configmaps coredns
-# Inside the resource YAML, add this line.
-# rewrite name regex (.*)\.blackpink\.io {1}.default.svc.cluster.local
-# kubectl get pods -n kube-system
-# kubectl delete pods -n kube-system coredns-565d847f94-cbpl9 coredns-565d847f94-fc98b
-# kubectl get pods -n kube-system
-
----
-# kubectl run nginx-coredns --image=nginx:latest --port 80
-# kubectl expose pod nginx-coredns --type NodePort --name nginx-svc
-# kubectl exec -it amazon-linux -- /bin/sh
-# curl nginx-svc.blackpink.io
-
----
-
-# undo the changes made to the CoreDNS without crashing the cluster.
-#kubectl edit -n kube-system configmaps coredns
-# remove this line
-# rewrite name regex (.*)\.blackpink\.io {1}.default.svc.cluster.local
-# kubectl get pods -n kube-system
-# kubectl delete pods -n kube-system coredns-565d847f94-2b8rn coredns-565d847f94-r8kwb
-# kubectl get pods -n kube-system
-
-# kubectl exec -it amazon-linux -- /bin/sh
-# curl nginx-svc.blackpink.io
-# try another (curl nginx-svc.default.svc.cluster.local)
----
-
-# kubectl get all -n default 
-# kubectl delete deployments.apps -n default --all
-# kubectl deleter pods -n default --all
-# kubectl delete svc cassandra-headless frontend-svc httpd-lb httpd-nodeport httpd-pod nginx-svc redis-main-svc redis-support ubuntu-svc  
-# kubectl get namespaces
-# kubectl delete namespace extra-01 ubuntu
-# kubectl get all -n default
-
---- # k8s storage
-# redis.yaml
-apiVersion: v1 
-kind: pod
-metadata: 
-  name: rd-pod
-
-spec:
-  containers:
-  - name: rd-container
-    image: redis:latest
-
-# kubectl apply -f redis.yaml
-# kubectl get pods
-# kubectl describe pod rd-pod
-# kubectl exec -it rd-pod --/bin/bash
-  # echo "hiii how r u" > sample.txt
-# kill 1 (crashing container)
-# redis.yaml
-
-apiVersion: v1 
-kind: pod
-metadata: 
-  name: rd-vol
-
-spec:
-  containers:
-  - name: rd-vol
-    image: redis:latest
-    volumeMounts:
-    - name: rd-volume
-      mountPath: /data
-  volumes: 
-  - name: rd-volume
-    emptyDir: {}
-
-# kubectl apply -f redis.yaml
-# kubectl exec -it rd-vol --/bin/bash
- # echo "hiii how r u" > vol.txt
-# kill 1
-# reececute "kubectl exec -it rd-vol --/bin/bash"  (chech vol.txt is present)
-
-# kubectl describe pod rd-volume
-
---- # ubuntu-empty.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: ubuntu-empty
-spec:
-  containers:
-  - name: ubuntu-empty-container
-    image: ubuntu:20.04
-    command: ['sleep', '604800']
-    volumeMounts:
-    - mountPath: /data
-      name: ubuntu-vol
-  volumes:
-    - name: ubuntu-vol
-      emptyDir: {}
-
-# kubectl describe pod ubuntu-empty
-
-
---- # Create an Ubuntu Linux pod with an emptyDir Volume mounted to it
-
-# mkdir vol-data && cd vol-data && touch test.text
-# ubuntu-dual.yaml
-
-apiVersion: v1
-kind: pod
-matadata: ubuntu-dual
-spec: 
-  containers:
-  - name: ubuntu-dual-container
-    image: ubuntu:20.04
-    command: ['sleep' '604800']
-    volumeMounts:
-    - mountPath: /data
-      name: empty-vol
-    - mountPath: /vol
-      name: host-vol
-  volumes: 
-  - name: empty-vol
-    emptyDir: {}
-  - name: host-vol
-    hostPath:
-      path: /vol-data
-
-# kubectl apply -f ubuntu-dual.yaml
-# kubectl exec -it ubuntu-dual -- /bin/bash
-# ls  
-# ls /vol
-    
---- # persistant volume
-
-sudo mkdir /opt/sfw/data 
-sudo sh -c "echo 'hello! welcome to nginx pv' > /opt/sfw/data/index.html"
-
-pv-vol.ymal
-
-apiVersion: v1 
-kind: PersistentVolume
-metadata:   
-  name: pv-vol.ymal
-spec:
-  capacity: 
-    storage: 1Gi
-  accessModes:
-  - ReadWriteMany: 
-  persistentVolumeReclaimPolicy: Retain 
-  nfs:
-    path: /opt/sfw/data
-    server: <ip adress>
-    readOnly: false 
-
-
-# kubectl apply -f pv-vol.yaml
-# kubectl get pv
-# pvc (persistant volume claim) pv --> pvc --> pod
-# pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: my-pvc
-spec:
-  accessModes:
-  - ReadWriteMany 
-  resources: 
-    requests: 
-      storage: 200Mi
-
-# kubectl apply -f pvc.yaml
-# nfs server (sudo apt update && sudo apt install nfs-kernel-server -y)
-# create mount location (sudo mkdir /opt/sfw && sudo chmod 1777 /opt/sfw)
-# sudo vim /etc/exports  (add line i.e /opt/sfw/ *(rw,sync,no_root_squash,subtree_check))
-
-# sudo exportsfs -ra
-# showmount -e control-plane
-
-# switch to node1 vm 
-
-# sudo apt install nfs-common -y
-# sudo mount <control palin internal ip>:/opt/sfw /mnt 
-
-# do this to node 2
-
----
-#Create a /data directory under /opt/sfw directory.
-#nano pv.yaml
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: pv
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-  - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  nfs:
-    path: /opt/sfw/data
-    server: 10.182.0.2  # internal or static IP of control-plane node
-    readOnly: false
-
-# kubectl apply -f pv.yaml
-
----
-
-# mounting on pod
-# vim nginx-pv.yaml
-apiVersion: v1  
-kind: pod
-metadata:
-  name: nginx-pv 
-spec: 
-  containers: 
-  - name: nginx-pv-container
-    image: nginx
-    ports:
-    - containerPort: 80
-    volumeMounts:
-      - mountPath: "/usr/share/nginx/html"
-        name: pv-vol
-  volumes:
-    - name: pv-vol
-      persistentVolumeReclaimPolicy:
-        claimName: my-pvc
-
-# kubectl apply -f nginx-pv.yaml
-
-# kubectl describe pod nginx-pv 
-# curl http://<ip>:80
-
----
-# vim nginx-pv-deploy.yaml
-
-apiVersion: apps/v1
-kind: Deployment
-metadata: 
-  name: nginx-pv-deploy 
-  labels:
-    app: pv
-specs:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: pv
-  template:
-    metadata:
-      labels:
-        app: pv
-    spec:
-      containers:
-      - name: nginx-pv-deploy 
-        image: nginx
-        ports:
-          - containerPort: 80
-        volumeMounts:
-        - mountPath: "/usr/share/nginx/html"
-          name: pv-vol
-      volumes:
-      - name: pv-vol
-        persistentVolumeReclaim:
-          claimName: my-pvc
-# kubectl apply -f nginx-pv-deploy.yaml
-# kubectl get deployments
-# kubectl get pods
-# curl http://<ip>:80
-
-
----
-nano pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: my-pvc
-spec:
-  accessModes:
-  - ReadWriteMany
-  resources:
-    requests:
-      storage: 200Mi
-# kubectl apply -f pvc.yaml
----      
-# nano ubuntu-pv.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: my-ubuntu
-spec:
-  containers:
-    - name: my-ubuntu-container
-      image: ubuntu:20.04
-      command: ['sleep', '604800']
-      volumeMounts:
-        - mountPath: /vol-data
-          name: pv
-  volumes:
-    - name: pv
-       persistentVolumeClaim:
-        claimName: pvc
-
-# kubectl apply -f ubuntu-pv.yaml
-# kubectl get pods my-ubuntu
-# kubectl exec -it my-ubuntu -- /bin/bash
-# cd vol-data/
-# touch test.txt
-# ls
-
-# Navigate to the node-1 terminal and list out the contents of /mnt.
-# ls /mnt/data
-
-# kubectl get pv my-pv -o yaml > pv-default.txt
-# kubectl get pvc my-pvc -o yaml > pvc-default.txt
-
---- # working with secrets
-
-# kubectl get cm -n kube-system coredns  (listing config maps)
-# kubectl describe cm -n kube-system coredns > my-config.txt
-
-# (kubectl get secrets --all-namespaces) && (kubectl get configmaps --all-namespaces)
-# echo -n "admin" > user.txt
-# echo -n "12345" > pswd.txt
-
-# kubectl create secret generic user --from-file= ./user.txt 
-# kubectl create secret generic pswd --from-file= ./pswd.txt 
-
-# vim projected-vol.yaml
-
-apiVersion: v1
-kind: pod
-metadata: 
-  name: secret-busybox
-specs:
-  containers:
-    - name: secret-busybox-container
-      image: busybox
-      args:
-        - sleep
-        - "3600"
-      volumeMounts:
-        - mountPath: "/projected-volume/secrets"
-          name: projected-vol-01
-          readOnly: true
-
-  volumes:
-    - name: projected-vol-01
-      projected:
-        sources:
-          - secret:
-             name: user
-          - secret:
-              name: pswd
-
-# kubectl apply -f projected-vol.yaml
-# kubectl exec -it secret-busybox -- /bin/bash
-# cd projected-volume
-# cd secrets
-
---- # creating secret through yaml
-# vim fb-id.yaml
-apiVersion: v1 
-kind: secret
-metadata:
-  name: fb-id 
-type: opaque 
-stringData:
-  username: dummy 
-
-# echo -n "12345" > fb-pswd.txt
-# kubectl create secret generic fb-pwd --from-file=./fb-pswd.txt
-# kubectl get secrets
-
-# vim ubuntu-secret.yaml
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: ubuntu-secret
-spec:
-  containers:
-    - name: ubuntu-secret-container
-      image: ubuntu:latest
-      args:
-        - sleep
-        - "3600"
-      volumeMounts:
-        - mountPath: /secrets
-          name: projected-vol
-          readOnly: true
-
-  volumes:
-    - name: projected-vol
-      projected:
-        sources:
-        - secret:
-             name: fb-id
-        - secret:
-            name: fb-pwd
-
-# kubectl apply -f ubuntu-secret.yaml
-# kubectl exec -it ubuntu-secret -- /bin/bash
-# ls 
-# cd secrets
-# cat username
-# cat fb-pswd.txt
-
---- # configmaps
-# vim configmap.ymal
-
-apiVersion: v1 
-kind:  configMap
-metadata: 
-  name: game-config 
-data: 
-  enemies: "pyroSline"
-  enemies.HP: "9999"
-  enemies.ATK: "499"
-  enemies.EM: "9999"
-  enemies.pyroResistence: "true" 
-  enemies.respawn.period: "0 0 0 * *"
-  enemies.material: "slimeCondensate"
-
-
-# kubectl apply -f configmap.ymal
-# kubectl get configmaps
-
---- # vim asia-cm.yaml
-Output:
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: asian-countries
- 
-data:
-  India: "New Delhi"
-  China: "Beijing"
-  Japan: "Tokyo"
-  Srilanka: "Colombo"
-  SouthKorea: "Seoul"
-
-# kubectl apply -f asia-cm.ymal
-
---- # nano ubuntu-cm.yaml
- 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: ubuntu-cm
-spec:
-  containers:
-    - name: ubuntu-cm-container
-      image: ubuntu:latest
-      command: ["sleep", "3600"]
-      volumeMounts:
-      - name: config-vol
-        mountPath: "/asian-countries"
-        readOnly: true
-  volumes:
-    - name: config-vol
-      configMap:
-        name: asian-countries
-
-# kubectl apply -f ubuntu-cm.yaml
-# kubectl exec -it ubuntu-cm -- /bin/bash
-# ls
-# cd asian-countries
-# ls
-# cat India
