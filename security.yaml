@@ -211,559 +211,138 @@
 
 --- # liveness and readiness probs
 
-# vim probes.yaml
+# probes
 
-apiVersion: v1 
-kind: pod
-metadata:
-  name: test-probes
-  labels:
-    test: probes 
-spec: 
-  containers: 
-  - name: test-probe-container 
-    image: registry.k8s.io/busybox
-    command: ['/bin/sh', '-c', 'touch /tmp/healthy; sleep 30; rm -f /tmp/healthy; sleep 600']
-    livenessProbe:
-      exec:
-        command: 
-        - cat 
-        - /tmp/healthy 
-      initialDelaySeconds: 10
-      periodSeconds: 10
-
-    readinessProbe:
-      exec:
-        command:
-        - cat
-        - /tmp/healthy 
-      initialDelaySeconds: 10
-      periodSeconds: 10
+        apiVersion: v1 
+        kind: pod
+        metadata:
+          name: test-probes
+          labels:
+            test: probes 
+        spec: 
+          containers: 
+          - name: test-probe-container 
+            image: registry.k8s.io/busybox
+            command: ['/bin/sh', '-c', 'touch /tmp/healthy; sleep 30; rm -f /tmp/healthy; sleep 600']
+            livenessProbe:
+              exec:
+                command: 
+                - cat 
+                - /tmp/healthy 
+              initialDelaySeconds: 10
+              periodSeconds: 10
+        
+            readinessProbe:
+              exec:
+                command:
+                - cat
+                - /tmp/healthy 
+              initialDelaySeconds: 10
+              periodSeconds: 10
 
 # kubectl apply -f probes.yaml
 # kubectl describe test-probes 
 
---- # vim init-nginx.yaml
+---
+# init-nginx
 
-apiVersion: v1 
-kind: pod
-metadata:
-  name: init-web
-  labels:
-    test: init-web  
-spec: 
-  containers: 
-  - name: name-application 
-    image: nginx-latest
-    volumrMounts:
-      - name: nginx-logs
-        mountPath: /var/log/nginx
-  - name: busybox-sidecar
-    image: busybox:latest
-    command: ['sh', '-c', 'while true; do cat /var/log/nginx/access.log; sleep 30; done']
-    volumeMounts:
-      - name: nginx-logs
-        mountPath: /var/log/nginx
-  volumes: 
-    -name: nginx-logs 
-    emptyDir: {}
-  
-  initContainers:
-    - name: busybox-init 
-      image: busybox: latest
-      command: ['sh', '-c', 'echo busyboc-init started...; sleep 5;echo busybox-init completed.;] 
+        apiVersion: v1 
+        kind: pod
+        metadata:
+          name: init-web
+          labels:
+            test: init-web  
+        spec: 
+          containers: 
+          - name: name-application 
+            image: nginx-latest
+            volumrMounts:
+              - name: nginx-logs
+                mountPath: /var/log/nginx
+          - name: busybox-sidecar
+            image: busybox:latest
+            command: ['sh', '-c', 'while true; do cat /var/log/nginx/access.log; sleep 30; done']
+            volumeMounts:
+              - name: nginx-logs
+                mountPath: /var/log/nginx
+          volumes: 
+            -name: nginx-logs 
+            emptyDir: {}
+          
+          initContainers:
+            - name: busybox-init 
+              image: busybox: latest
+              command: ['sh', '-c', 'echo busyboc-init started...; sleep 5;echo busybox-init completed.;] 
 
 # kubectl create -f init-nginx.yaml
 # kubectl describe pod init-web
+---
 
-# vim pod-scheduling.yaml
+# pod-scheduling
 
-apiVersion: apps/v1
-kind: deployment
-metadata:
-  name: deploy-01
-    
-spec: 
-  replicas: 5
-  selector:
-    matchLabels:
-      app: v1 
-  template:
-    metadata:
-      labels:  
-        app: v1 
-    spec:
-      containers: 
-      - name: deploy-01-container 
-        image: nginx-latest
-        ports:
-          - containerPort: 80 
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                  -node-1
+        apiVersion: apps/v1
+        kind: deployment
+        metadata:
+          name: deploy-01
+            
+        spec: 
+          replicas: 5
+          selector:
+            matchLabels:
+              app: v1 
+          template:
+            metadata:
+              labels:  
+                app: v1 
+            spec:
+              containers: 
+              - name: deploy-01-container 
+                image: nginx-latest
+                ports:
+                  - containerPort: 80 
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values:
+                          -node-1
 
 # kubectl apply-f scheduling.yaml
 # kubectl aget deployments 
 
 
---- # vim alpine.yaml
- 
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: alpine
+--- 
+# alpine
 
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-     app: alpine
-  template:
-    metadata:
-      labels:
-        app: alpine
-    spec:
-      containers:
-        - name: alpine-container
-          image: alpine:latest
-          command: ['sleep', '3600']
-          ports:
-           - containerPort: 80
-      tolerations:
-      - key: "app"
-        operator: "Equal"
-        value: "alpine"
-        effect: "NoSchedule"
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: alpine
+        
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+             app: alpine
+          template:
+            metadata:
+              labels:
+                app: alpine
+            spec:
+              containers:
+                - name: alpine-container
+                  image: alpine:latest
+                  command: ['sleep', '3600']
+                  ports:
+                   - containerPort: 80
+              tolerations:
+              - key: "app"
+                operator: "Equal"
+                value: "alpine"
+                effect: "NoSchedule"
 
 # kubectl apply -f alpine.yaml
-
---- # vim selective-workload.yaml
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: selective-workload
- 
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-     app: node-2
-  template:
-    metadata:
-      labels:
-        app: node-2
-    spec:
-      containers:
-        - name: sl-workload-container
-          image: alpine:latest
-          command: ['sleep', '3600']
-          ports:
-          - containerPort: 80
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - node-2
-
-# kubectl apply -f selective-workload.yaml
-
---- # vim only-node-2.yaml
-
-apiVersion: v1
-kind: Pod
-metadata:
-  name: only-node-2
- 
-spec:
-  containers:
-    - name: only-node-2-container
-      image: alpine:latest
-      command: ['sleep', '3600']
-      ports:
-      - containerPort: 80
-  nodeSelector:
-     kubernetes.io/hostname: node-2
-
-# kubectl apply -f only-node-2.yaml
-# kubectl get pods -l only-node-2 -o wide
-
----
-# kubectl decscribe node control-plane
-# kubectl taint nodes control-plane node-role.kubernetes.io/control-plane:NoSchedule-
-# nano only-control-plane.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: only-control-plane
- 
-spec:
-  containers:
-    - name: only-control-plane-container
-      image: alpine:latest
-      command: ['sleep', '3600']
-      ports:
-      - containerPort: 80
-  nodeSelector:
-    kubernetes.io/hostname: control-plane
-
-# kubectl apply -f only-control-plane.yaml
-# kubectl get pods only-control-plane -o wide
-# kubectl taint nodes control-plane node-role.kubernetes.io/control-plane:NoSchedule
-
---- # taints (work on nodes) and toleration (work on pods)
-# kubectl taint node node-1 app=tt:NoSchedule
-
-# vim deploy-nginx.yaml
-
-apiVersion: apps/v1v1
-kind: Deployment
-metadata:
-  name: deploy-tt
- 
-spec:
-  replicas: 4
-  selector:
-    matchLabels:
-      app: tt 
-  template:
-    metadata:
-      labels: 
-        app: tt  
-    containers:
-    - name: tt-container 
-      image: nginx:latest
-      ports:
-      - containerPort: 80
-# tolaration work on pod based
-    tolarations:
-    - key: "app"
-      operator: "Equal"
-      value: "tt"
-      effect: "NoSchedule"
-
-
-# kubectl apply -f deploy-nginx.yaml
-# kubectl get pods -o wide -l app=tt
-# kubectl taint node node-1 apt=tt:NoSchedule-  (to untaint the node)
-
---- # statefulSets
-
-# prerequisite for statefulsets
-
-# kubectl create namespace zookeeper
-# kubectl config set-context --currrent --namespace=zookeeper
-
-# mkdir zookeeper && cd zookeeper
-# vim zk-cip.yaml
-
-apiVersion: v1 
-kind: Service 
-metadata:
-  name: zk-cs
-  labels:
-    app: zk 
-spec: 
-  ports:
-  - port: 2181
-    name: client 
-  selector: 
-    app: zk
----
-# vim zk-hs.yaml
-apiVersion: v1 
-kind: Service 
-metadata:
-  name: zk-hs
-  labels:
-    app: zk 
-spec: 
-  selector: 
-    app: zk 
-  clusterIP: None 
-  ports:
-  - port: 2888
-    name: server  
-  - port: 3888
-    name: leader-election
-
---- # vim zk-pdb.yaml
-
-apiVersion: policy/v1 
-kind: PodDisruptionBudget
-metadata:
-  name: zk-pdb 
-spec: 
-  selector:
-    matchLabels:
-      app:zk
-  maxUnavailable: 1
-
---- # vim zk-ss.yaml
-
-apiVersion: apps/v1 
-kind: StatefulSet 
-metadata:
-  name: zk
-spec: 
-  selector: 
-    matchLabels:
-      app: zk 
-  serviceName: zk-hs
-  replicas: 3
-  template:
-    metadata:
-      labels: 
-        app: zk 
-    spec:
-      containers:
-      - name: k8s-zookeeper
-        imagePullPolicy: Always
-        image: "k8s.gcr.io/kubernetes-zookeeper:1.0.3.4.10"
-        ports:
-        - containerPort: 2181
-          name: client
-        - containerPort: 2888
-          name: server 
-        - containerPort: 3888
-          name: leader-election 
-        command:
-        - sh 
-        - -c 
-        - "start-zookeeper \ 
-          --servers=3 \
-          --data_dir=/var/lib/zookeeper/data \
-          --data_log_dir=/var/lib/zookeeper/data/log \
-          --conf_dir=/opt/zookeeper/conf \
-          --client_port=2181 \
-          --election_port=3888 \
-          --server_port=2888 \
-          --tick_time=2000 \
-          --init_limit=10 \
-          --sync_limit=5 \
-          --heap=512M \
-          --max_client_cnxns=60 \
-          --snap_retain_count=3 \
-          --purge_interval=12 \
-          --max_session_timeout=40000 \
-          --min_session_timeout=4000 \
-          --log_level=INFO"
-        volumeMounts:
-        - name: zk-volume
-          mountPath: /var/lib/zookeeper 
-      volumes:
-      - name: zk-volume 
-        emptyDir: {}
-
-# kubectl apply -f ./
-
-# kubectl describe statefulSet zk
-# kubectl  describe svc zk-hs
-# kubectl describe poddisruptionbudgets zk-pdb
-
-# kubectl get pods
-# kubectl exec -it zk-0 --bash
-  # echo ruok | nc 127.0.0.1 2181
-  # echo srvr | nc localhost 2181 |grep Mode
-  # exit
- # kubectl exec -it zk-1 --bash
-  # echo srvr | nc localhost 2181 |grep Mode
-  # exit
-# kubectl exec -it zk-2 --bash
-  # echo srvr | nc localhost 2181 |grep Mode
-  # exit
-
-# kubectl delete \
- # statefulset zk 
-
-
---- # helm (package manager + YAML template tool)
-
-# setting up helm
-
-# sudo apt install apt-transport-https -y
-# curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-# echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list deb [arch=amd64 signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main
-# sudo apt-get update
-# sudo apt install helm
-# helm version
-
-# helm list 
-# helm search hub nginx
-# artifactHub.io
-# helm repo add <chart name> <chart link>
-# helm repo update
-
-
---- # installing HELM 
-# curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-# sudo apt-get install apt-transport-https --yes
-# echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-# sudo apt-get update
-# sudo apt-get install helm
-
-# helm repo add traefik https://helm.traefik.io/traefik
-# helm repo update
-# helm install traefik traefik/traefik
-# helm list
-# kubectl get deployments traefik
-# kubectl get pods traefik-
-# kubectl get svc traefik
-
----
-# helm search repo nginx
-# helm repo add bitnami https://charts.bitnami.com/bitnami
-# helm install nginx bitnami/nginx
-# kubectl get svc
-
---- # setting up HAProxy (high availability proxy) loadBalancer
- 
- copy internal ip 
- # ssh into load balancer instance
-
-# sudo apt update && sudo apt install haproxy
-# haproxy -version
-# sudo vim /etc/haproxy/haproxy.cfg
-   # default section change mode  tcp   option tcplog
-  # add  frontend proxy
-                # bind *:80
-                # bind *:6443
-                # stats uri /proxystats
-                # default_backend myservers
-        # backend myservers
-                # balance roundrobin
-                # server control-plane-1 <ip of control-plane>:6443 check
-                # server control-plane-2 <ip of control-plane-2>:6443 check
-                # server control-plane-3 <ip of control-plane-3>:6443 check
-        # listen stats
-               # bind :9999
-               # mode http
-               # stats enable
-               # stats hide-version
-               # stats uri /stats
-
-#sudo systemctl restart haproxy.service
-
-# ssh to original control palne
-
-# sudo vim /etc/hosts
-# below local host ip add internal ip of loadbalancer and type lb
-# do it on all control plane
-# http:<external ip of lb>:9999/stat
-
-
---- # creating highly available k8s cluster using kubeadm
-
-# sudo kubeadm reset
-# sudo kubeadm init \
-  # --apiserver-advertise-address <internal ip of control plane> \
-  # --control-plane-endpoint <internal ip of lb> \
-  # --pod-network-cidr=10.244.0.0/16 \
-  # --upload-certs
-
-# mkdir -p $HOME/.kube
-# sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-# sudo chown $(id -u):$(id -g) $HOME/.kube/config
-# kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-
-
---- # backing up the etcd database
-# sudo apt install etcd-client
-# etcdctl --version
-# kubectl run nginx --image nginx:latest --port 80
-# etcdctl -h
-# sudo ls /etc/kubernetes/pki/etcd
-# sudo ETCDCTL_API=3 etcdctl --endpoints <internal ip of control plane ip>:2379 \
-  # --cert=/etc/kubernetes/pki/etcd/server.crt \
-  # --key=/etc/kubernetes/pki/etcd/server.key \
-  # --cacert=etc/kubernetes/pki/etcd/ca.crt \
-  # member list -w table
---- 
-# sudo ETCDCTL_API=3 etcdctl --endpoints :2379 \
-  #--cert=/etc/kubernetes/pki/etcd/server.crt \
-  #--key=/etc/kubernetes/pki/etcd/server.key \
-  #--cacert=/etc/kubernetes/pki/etcd/ca.crt \
-  #endpoint health
---- 
-# to create snapshot
-# sudo ETCDCTL_API=3 etcdctl --endpoints <internal ip of control plane ip>:2379 \
-  # --cert=/etc/kubernetes/pki/etcd/server.crt \
-  # --key=/etc/kubernetes/pki/etcd/server.key \
-  # --cacert=etc/kubernetes/pki/etcd/ca.crt \
-  # snapshot save /var/lib/etcd/snapshot.db
-
-# mkdir k8s-backup
-# sudo cp /var/lib/etcd/snapshot.db $HOME/k8s-backup/
-
-# kubectl get configmaps -n kube-system
-# kubectl get configmaps -n kube-system kubeadm-config -o yaml > $HOME/k8s-backup/kubeadm-config.yaml
-# sudo cp -r /etc/kubernetes/pki/etcd $HOME/k8s-backup/
-
-
---- # upgrading cluster (changing k8s version)
-
-# sudo kubeadm version 
-# sudo apt install kubeadm=1.25.2 (any version)
-# kubectl drain control-plane --ignore-daemonsets
-# sudo kubeadm upgrade plan
-# sudo kubeadm upgrade apply v1.25.2 
-# kubectl get nodes
-# kubectl uncorden control-palne
-# sudo systemctl daemon-reload
-# sudo systemctl restart kubelet
-
-# restoring snapshot
-# sudo ETCDCTL_API=3 etcdctl --endpoints <internal ip of control plane ip>:2379 \
-  # --cert=/etc/kubernetes/pki/etcd/server.crt \
-  # --key=/etc/kubernetes/pki/etcd/server.key \
-  # --cacert=etc/kubernetes/pki/etcd/ca.crt \
-  # snapshot restore $HOME/k8s-backup/snapshot.db
-
-# 
----
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
