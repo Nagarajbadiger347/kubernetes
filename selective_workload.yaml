@@ -1,0 +1,117 @@
+--- 
+# selective-workload.
+
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: selective-workload
+         
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+             app: node-2
+          template:
+            metadata:
+              labels:
+                app: node-2
+            spec:
+              containers:
+                - name: sl-workload-container
+                  image: alpine:latest
+                  command: ['sleep', '3600']
+                  ports:
+                  - containerPort: 80
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                    - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values:
+                        - node-2
+
+# kubectl apply -f selective-workload.yaml
+
+---
+# only-node-2
+
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: only-node-2
+         
+        spec:
+          containers:
+            - name: only-node-2-container
+              image: alpine:latest
+              command: ['sleep', '3600']
+              ports:
+              - containerPort: 80
+          nodeSelector:
+             kubernetes.io/hostname: node-2
+
+# kubectl apply -f only-node-2.yaml
+# kubectl get pods -l only-node-2 -o wide
+
+---
+# kubectl decscribe node control-plane
+# kubectl taint nodes control-plane node-role.kubernetes.io/control-plane:NoSchedule-
+# only-control-plane.yaml
+
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: only-control-plane
+         
+        spec:
+          containers:
+            - name: only-control-plane-container
+              image: alpine:latest
+              command: ['sleep', '3600']
+              ports:
+              - containerPort: 80
+          nodeSelector:
+            kubernetes.io/hostname: control-plane
+
+# kubectl apply -f only-control-plane.yaml
+# kubectl get pods only-control-plane -o wide
+# kubectl taint nodes control-plane node-role.kubernetes.io/control-plane:NoSchedule
+
+--- 
+# taints (work on nodes) and toleration (work on pods)
+# kubectl taint node node-1 app=tt:NoSchedule
+
+# deploy-nginx
+
+        apiVersion: apps/v1v1
+        kind: Deployment
+        metadata:
+          name: deploy-tt
+         
+        spec:
+          replicas: 4
+          selector:
+            matchLabels:
+              app: tt 
+          template:
+            metadata:
+              labels: 
+                app: tt  
+            containers:
+            - name: tt-container 
+              image: nginx:latest
+              ports:
+              - containerPort: 80
+        # tolaration work on pod based
+            tolarations:
+            - key: "app"
+              operator: "Equal"
+              value: "tt"
+              effect: "NoSchedule"
+
+
+# kubectl apply -f deploy-nginx.yaml
+# kubectl get pods -o wide -l app=tt
+# kubectl taint node node-1 apt=tt:NoSchedule-  (to untaint the node)
