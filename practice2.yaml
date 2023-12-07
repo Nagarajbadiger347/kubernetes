@@ -1,0 +1,384 @@
+--- 
+# k8s storage Volumes
+# redis
+
+    apiVersion: v1 
+    kind: pod
+    metadata: 
+      name: rd-pod
+    
+    spec:
+      containers:
+      - name: rd-container
+        image: redis:latest
+
+# kubectl apply -f redis.yaml
+# kubectl get pods
+# kubectl describe pod rd-pod
+# kubectl exec -it rd-pod --/bin/bash
+  # echo "hiii how r u" > sample.txt
+# kill 1 (crashing container)
+
+# redis
+
+    apiVersion: v1 
+    kind: pod
+    metadata: 
+      name: rd-vol
+    
+    spec:
+      containers:
+      - name: rd-vol
+        image: redis:latest
+        volumeMounts:
+        - name: rd-volume
+          mountPath: /data
+      volumes: 
+      - name: rd-volume
+        emptyDir: {}
+
+# kubectl apply -f redis.yaml
+# kubectl exec -it rd-vol --/bin/bash
+ # echo "hiii how r u" > vol.txt
+# kill 1
+# reececute "kubectl exec -it rd-vol --/bin/bash"  (chech vol.txt is present)
+
+# kubectl describe pod rd-volume
+
+--- # ubuntu-empty
+
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: ubuntu-empty
+    spec:
+      containers:
+      - name: ubuntu-empty-container
+        image: ubuntu:20.04
+        command: ['sleep', '604800']
+        volumeMounts:
+        - mountPath: /data
+          name: ubuntu-vol
+      volumes:
+        - name: ubuntu-vol
+          emptyDir: {}
+
+# kubectl describe pod ubuntu-empty
+
+
+--- # Create an Ubuntu Linux pod with an emptyDir Volume mounted to it
+
+
+# mkdir vol-data && cd vol-data && touch test.text
+# ubuntu-dual
+
+    apiVersion: v1
+    kind: pod
+    matadata: ubuntu-dual
+    spec: 
+      containers:
+      - name: ubuntu-dual-container
+        image: ubuntu:20.04
+        command: ['sleep' '604800']
+        volumeMounts:
+        - mountPath: /data
+          name: empty-vol
+        - mountPath: /vol
+          name: host-vol
+      volumes: 
+      - name: empty-vol
+        emptyDir: {}
+      - name: host-vol
+        hostPath:
+          path: /vol-data
+
+# kubectl apply -f ubuntu-dual.yaml
+# kubectl exec -it ubuntu-dual -- /bin/bash
+# ls  
+# ls /vol
+    
+--- # persistant volume
+
+# sudo mkdir /opt/sfw/data 
+# sudo sh -c "echo 'hello! welcome to nginx pv' > /opt/sfw/data/index.html"
+
+# pv-vol.yaml
+
+    apiVersion: v1 
+    kind: PersistentVolume
+    metadata:   
+      name: pv-vol.ymal
+    spec:
+      capacity: 
+        storage: 1Gi
+      accessModes:
+      - ReadWriteMany: 
+      persistentVolumeReclaimPolicy: Retain 
+      nfs:
+        path: /opt/sfw/data
+        server: <ip adress>
+        readOnly: false 
+
+
+# kubectl apply -f pv-vol.yaml
+# kubectl get pv
+# pvc (persistant volume claim) pv --> pvc --> pod
+
+
+# pvc.yaml
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: my-pvc
+    spec:
+      accessModes:
+      - ReadWriteMany 
+      resources: 
+        requests: 
+          storage: 200Mi
+
+# kubectl apply -f pvc.yaml
+# nfs server (sudo apt update && sudo apt install nfs-kernel-server -y)
+# create mount location (sudo mkdir /opt/sfw && sudo chmod 1777 /opt/sfw)
+# sudo vim /etc/exports  (add line i.e /opt/sfw/ *(rw,sync,no_root_squash,subtree_check))
+
+# sudo exportsfs -ra
+# showmount -e control-plane
+
+# switch to node1 vm 
+
+# sudo apt install nfs-common -y
+# sudo mount <control palin internal ip>:/opt/sfw /mnt 
+
+# do this to node 2
+
+---
+
+#Create a /data directory under /opt/sfw directory.
+#nano pv.yaml
+
+    apiVersion: v1
+    kind: PersistentVolume
+    metadata:
+      name: pv
+    spec:
+      capacity:
+        storage: 1Gi
+      accessModes:
+      - ReadWriteMany
+      persistentVolumeReclaimPolicy: Retain
+      nfs:
+        path: /opt/sfw/data
+        server: 10.182.0.2  # internal or static IP of control-plane node
+        readOnly: false
+
+# kubectl apply -f pv.yaml
+
+---
+
+# mounting on pod
+
+# vim nginx-pv.yaml
+
+    apiVersion: v1  
+    kind: pod
+    metadata:
+      name: nginx-pv 
+    spec: 
+      containers: 
+      - name: nginx-pv-container
+        image: nginx
+        ports:
+        - containerPort: 80
+        volumeMounts:
+          - mountPath: "/usr/share/nginx/html"
+            name: pv-vol
+      volumes:
+        - name: pv-vol
+          persistentVolumeReclaimPolicy:
+            claimName: my-pvc
+
+# kubectl apply -f nginx-pv.yaml
+
+# kubectl describe pod nginx-pv 
+# curl http://<ip>:80
+
+---
+# vim nginx-pv-deploy.yaml
+
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata: 
+      name: nginx-pv-deploy 
+      labels:
+        app: pv
+    specs:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: pv
+      template:
+        metadata:
+          labels:
+            app: pv
+        spec:
+          containers:
+          - name: nginx-pv-deploy 
+            image: nginx
+            ports:
+              - containerPort: 80
+            volumeMounts:
+            - mountPath: "/usr/share/nginx/html"
+              name: pv-vol
+          volumes:
+          - name: pv-vol
+            persistentVolumeReclaim:
+              claimName: my-pvc
+              
+# kubectl apply -f nginx-pv-deploy.yaml
+# kubectl get deployments
+# kubectl get pods
+# curl http://<ip>:80
+
+
+---
+# nano pvc.yaml
+
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: my-pvc
+    spec:
+      accessModes:
+      - ReadWriteMany
+      resources:
+        requests:
+          storage: 200Mi
+          
+# kubectl apply -f pvc.yaml
+---      
+# nano ubuntu-pv.yaml
+
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: my-ubuntu
+    spec:
+      containers:
+        - name: my-ubuntu-container
+          image: ubuntu:20.04
+          command: ['sleep', '604800']
+          volumeMounts:
+            - mountPath: /vol-data
+              name: pv
+      volumes:
+        - name: pv
+           persistentVolumeClaim:
+            claimName: pvc
+
+# kubectl apply -f ubuntu-pv.yaml
+# kubectl get pods my-ubuntu
+# kubectl exec -it my-ubuntu -- /bin/bash
+# cd vol-data/
+# touch test.txt
+# ls
+
+# Navigate to the node-1 terminal and list out the contents of /mnt.
+# ls /mnt/data
+
+# kubectl get pv my-pv -o yaml > pv-default.txt
+# kubectl get pvc my-pvc -o yaml > pvc-default.txt
+
+--- # working with secrets
+
+# kubectl get cm -n kube-system coredns  (listing config maps)
+# kubectl describe cm -n kube-system coredns > my-config.txt
+
+# (kubectl get secrets --all-namespaces) && (kubectl get configmaps --all-namespaces)
+# echo -n "admin" > user.txt
+# echo -n "12345" > pswd.txt
+
+# kubectl create secret generic user --from-file= ./user.txt 
+# kubectl create secret generic pswd --from-file= ./pswd.txt 
+
+# vim projected-vol.yaml
+
+    apiVersion: v1
+    kind: pod
+    metadata: 
+      name: secret-busybox
+    specs:
+      containers:
+        - name: secret-busybox-container
+          image: busybox
+          args:
+            - sleep
+            - "3600"
+          volumeMounts:
+            - mountPath: "/projected-volume/secrets"
+              name: projected-vol-01
+              readOnly: true
+    
+      volumes:
+        - name: projected-vol-01
+          projected:
+            sources:
+              - secret:
+                 name: user
+              - secret:
+                  name: pswd
+
+# kubectl apply -f projected-vol.yaml
+# kubectl exec -it secret-busybox -- /bin/bash
+# cd projected-volume
+# cd secrets
+
+--- 
+# creating secret through yaml
+# vim fb-id.yaml
+
+    apiVersion: v1 
+    kind: secret
+    metadata:
+      name: fb-id 
+    type: opaque 
+    stringData:
+      username: dummy 
+
+# echo -n "12345" > fb-pswd.txt
+# kubectl create secret generic fb-pwd --from-file=./fb-pswd.txt
+# kubectl get secrets
+
+# vim ubuntu-secret.yaml
+
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: ubuntu-secret
+    spec:
+      containers:
+        - name: ubuntu-secret-container
+          image: ubuntu:latest
+          args:
+            - sleep
+            - "3600"
+          volumeMounts:
+            - mountPath: /secrets
+              name: projected-vol
+              readOnly: true
+    
+      volumes:
+        - name: projected-vol
+          projected:
+            sources:
+            - secret:
+                 name: fb-id
+            - secret:
+                name: fb-pwd
+
+# kubectl apply -f ubuntu-secret.yaml
+# kubectl exec -it ubuntu-secret -- /bin/bash
+# ls 
+# cd secrets
+# cat username
+# cat fb-pswd.txt
