@@ -1,0 +1,256 @@
+--- # networking
+
+# kubectl get svc --all-namespaces
+# kubectl describe svc kubernetes
+# kubectl describe svc kube-ds --namespaces kube-system
+# kubectl run cip-pod --image nginx:latest --port 80 -l app=net-1
+
+--- 
+# nginx-cip
+
+    apiVersion: v1
+    kind: Service
+    metadata:  
+      name: nginx-service
+    spec:
+      selector: 
+        app: net-1
+      ports:
+      - name: http
+        protocol: TCP
+        ports: 8080
+        targetPort: 80
+
+# kubectl apply -f nginx-cip.yaml
+# kubectl describe svc nginx-service
+# curl http:// serviceip:8080 (accessable within the cluster)
+
+
+--- # endpoints
+# kubectl get endpoints --all-namespaces > endpoints.txt
+
+--- # apache httpd pod
+# kubectl run httpd-pod --image=httpd:latest --port 80
+# kubectl get pods htpd-pod
+# kubectl expose pod httpd-pod --type=clusterIP --port 80
+# kubectl get svc httpd-pod
+# curl hpttd://<cluster ip>:80
+
+--- 
+# nginx-nodeport
+
+    apiVersion: v1
+    kind: service
+    metadata:  
+      name: nginx-nodeport
+    spec:
+      type: NodePort
+      selector:
+        app: net-1
+      ports: 
+      - name: http
+        protocol: TCP
+        port: 8080
+        targetPort: 80
+        nodePort: 30005
+
+
+# kubectl apply -f nginx-nodeport.yaml
+# kubectl get svc
+# <external ip>:30005 (nginx accessable with external ip ie any of 3 ip i.e node or cluster )
+
+
+--- 
+# nodeport-httpd
+
+    apiVersion: v1
+    kind: service
+    metadata:  
+      name: httpd-nodeport
+    spec:
+      type: NodePort
+      selector:
+        app: httpd-pod
+      ports: 
+      - name: httpd
+        protocol: TCP
+        port: 8080
+        targetPort: 80
+        nodePort: 30001
+
+--- 
+# nginx-alpine
+
+    apiVersion: apps/v1
+    kind : deployment
+    metadata: 
+      name: nginx-alpine
+    spec:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: nginx-alpine
+        metadata: 
+          labels:  
+            app: nginx-alpine
+        spec:
+          containers:
+          - name: nginx
+            image: nginx:alpine
+            ports:
+            - containerPort: 80
+
+# kubectl apply -f nginx-alpine.yaml
+# kubectl edit svc httpd-nodeport (Edit the NodePort service object and replace the httpd-pod’s label with the nginx-alpine pod’s label in the service’s selector field) 
+# (This way, the httpd-nodeport service will only expose pods having the label app=nginx-alpine.)
+# http://<ip of any cluster or node>:30001/
+
+
+---
+# LoadBalancer
+
+# kubctl run nginx-lb --image  nginx:latest --port 80 -l app=lb
+# create loadbalancer in gcp connect with all 3 instance
+# nano nginx-lb.yaml
+    
+    apiVersion: v1
+    kind: service
+    metadata:
+      name: nginx-lb
+    
+    spec:
+      type: LoadBalancer
+      externalIPs:
+      - <load banacerip of gcp>
+      selector:
+        app: lb
+      ports:
+      - name: http
+        protocol: TCP
+        port: 80
+        targetPort: 80
+
+
+# kubectl apply -f nginx-ib.yaml
+# kubectl get svc --watch
+
+--- 
+# accessing the dns(domain name system) of k8s objects
+
+# kubectl get pods
+# kubectl get svc
+# ubuntu-dns.ymal
+
+    apiVersion: apps/v1
+    kind: pod
+    metadata:
+      name: ubuntu-dns.ymal
+    
+    spec:
+      containers:
+      - name: ubuntu-dns
+        image: ubuntu:latest
+        command: ["/bin/sleep", "infinity"]
+
+# kubectl apply -f ubuntu-dns.yaml
+# kubectl exec -it ubuntu-dns --/bin/bash
+# (apt-get update) , (apt install dnsutils curl)
+# (cat /etc/resolv.conf)
+# dig <name server> -x 
+
+---
+
+# kubectl get svc -o wide
+# kubectl get pods -l app=redis
+# The syntax for FQDN exposed by a service:
+# <resource-host-name>.<service-name>.<namespace>.svc.cluster.local
+
+---
+# kubectl run -it ubuntu-nameserver --image=ubuntu:latest 
+# echo 'google 8.8.8.8' >> /etc/resolv.conf
+   #cat /etc/resolv.conf
+
+
+---
+# kubectl expose pod ubuntu-nameserver --name ubuntu-svc --port 8080
+# kubectl get svc ubuntu-svc
+#  nano new-ubuntu.txt   (ubuntu-nameserver.ubuntu-svc.default.svc.cluster.local)
+  #cat new-ubuntu.txt 
+
+---
+# kubectl create namespace ubuntu
+# kubectl run -it ubuntu-nameserver --image=ubuntu:latest -n ubuntu
+# kubectl get pods -n ubuntu
+# kubectl expose pod ubuntu-nameserver --port 8082 --name ubuntu-svc-1 -n ubuntu
+# nano similar-fqdn.txt  (ubuntu-nameserver.ubuntu.svc.ubuntu.svc.cluster.local
+                   #       ubuntu-nameserver.ubuntu-svc.default.svc.cluster.local)      )
+# cat similar-fqdn.txt
+
+--- 
+# core dns
+# kubectl create namespace core-dns
+# kubectl config set-context --current --namespace core-dns
+# deploy-nginx.yaml
+
+    apiVersion: apps/v1
+    kind: deployment
+    metadata: 
+      name: deploy-nginx
+    spec:
+      replicas: 4
+      selectors: 
+        matchLabels:
+          app: nginx
+      template:
+        metadata: 
+          labeles:
+            app: nginx
+        spec:
+          containers:
+          - name: nginx-container
+            image: nginx:latest
+            ports:
+            - containerPort: 80
+
+# kubectl expose deployment deploy-nginx --type NodePort --name nginx-svc
+# nano ubuntu-pod.yaml
+# kubectl create -f ubuntu-pod.yaml
+# curl nginx-svc.core-dns.svc.cluster.local
+
+--- 
+
+#kubectl edit -n kube-system configmaps coredns
+# Inside the resource YAML, add this line.
+# rewrite name regex (.*)\.blackpink\.io {1}.default.svc.cluster.local
+# kubectl get pods -n kube-system
+# kubectl delete pods -n kube-system coredns-565d847f94-cbpl9 coredns-565d847f94-fc98b
+# kubectl get pods -n kube-system
+
+---
+# kubectl run nginx-coredns --image=nginx:latest --port 80
+# kubectl expose pod nginx-coredns --type NodePort --name nginx-svc
+# kubectl exec -it amazon-linux -- /bin/sh
+# curl nginx-svc.blackpink.io
+
+---
+
+# undo the changes made to the CoreDNS without crashing the cluster.
+#kubectl edit -n kube-system configmaps coredns
+# remove this line
+# rewrite name regex (.*)\.blackpink\.io {1}.default.svc.cluster.local
+# kubectl get pods -n kube-system
+# kubectl delete pods -n kube-system coredns-565d847f94-2b8rn coredns-565d847f94-r8kwb
+# kubectl get pods -n kube-system
+
+# kubectl exec -it amazon-linux -- /bin/sh
+# curl nginx-svc.blackpink.io
+# try another (curl nginx-svc.default.svc.cluster.local)
+---
+
+# kubectl get all -n default 
+# kubectl delete deployments.apps -n default --all
+# kubectl deleter pods -n default --all
+# kubectl delete svc cassandra-headless frontend-svc httpd-lb httpd-nodeport httpd-pod nginx-svc redis-main-svc redis-support ubuntu-svc  
+# kubectl get namespaces
+# kubectl delete namespace extra-01 ubuntu
+# kubectl get all -n default
