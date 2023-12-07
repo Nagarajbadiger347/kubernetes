@@ -382,3 +382,66 @@
 # cd secrets
 # cat username
 # cat fb-pswd.txt
+# configmaps
+# vim configmap.ymal
+
+        apiVersion: v1 
+        kind:  configMap
+        metadata: 
+          name: game-config 
+        data: 
+          enemies: "pyroSline"
+          enemies.HP: "9999"
+          enemies.ATK: "499"
+          enemies.EM: "9999"
+          enemies.pyroResistence: "true" 
+          enemies.respawn.period: "0 0 0 * *"
+          enemies.material: "slimeCondensate"
+
+
+# kubectl apply -f configmap.ymal
+# kubectl get configmaps
+
+--- # vim asia-cm.yaml
+        
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: asian-countries
+         
+        data:
+          India: "New Delhi"
+          China: "Beijing"
+          Japan: "Tokyo"
+          Srilanka: "Colombo"
+          SouthKorea: "Seoul"
+
+# kubectl apply -f asia-cm.ymal
+
+--- 
+# nano ubuntu-cm.yaml
+ 
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: ubuntu-cm
+        spec:
+          containers:
+            - name: ubuntu-cm-container
+              image: ubuntu:latest
+              command: ["sleep", "3600"]
+              volumeMounts:
+              - name: config-vol
+                mountPath: "/asian-countries"
+                readOnly: true
+          volumes:
+            - name: config-vol
+              configMap:
+                name: asian-countries
+
+# kubectl apply -f ubuntu-cm.yaml
+# kubectl exec -it ubuntu-cm -- /bin/bash
+# ls
+# cd asian-countries
+# ls
+# cat India
