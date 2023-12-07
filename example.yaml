@@ -1,0 +1,166 @@
+# google k8s engine (GKE)
+# Create an httpd deployment with replica count 2 using the object definition file on GKE.
+# httpd-gke
+
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: httpd
+     
+    spec:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: httpd
+      template:
+        metadata:
+          labels:
+            app: httpd
+        spec:
+          containers:
+            - name: httpd-container
+              image: httpd:latest
+              ports:
+               - containerPort: 80
+
+# kubectl apply -f httpd.gke.yaml
+
+# creating lb service
+
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: httpd-lb-gke
+    spec:
+      type: LoadBalancer
+      selector:
+        app: httpd
+      ports:
+      - name: httpd
+        protocol: TCP
+        port: 80
+         targetPort: 80
+
+# kubectl apply -f lb-gke.yaml
+
+--- 
+# httpd-gke
+
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: httpd-ingress
+     
+    spec:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: ingress
+      template:
+        metadata:
+          labels:
+            app: ingress
+        spec:
+          containers:
+            - name: httpd-container
+              image: httpd:latest
+              ports:
+               - containerPort: 80
+
+--- 
+# Create a NodePort service to expose the httpd-ingressdeployment.
+
+
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: ingress     
+    spec:
+      type: NodePort    
+      selector:
+        app: ingress
+      ports:
+      - name: httpd
+        protocol: TCP
+        port: 80
+         targetPort: 80
+
+# kubectl apply
+# (refer guide 3 gke)
+
+# ingress.yaml
+
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: app-ingress
+      labels:
+        name: myingress
+    spec:
+      rules:
+      - http:
+          - paths:
+              pathType: Prefix
+              path: "/"
+              backend:
+                service:
+                  name: ingress 
+                  port: 
+                    number: 80
+
+---
+
+# kubectl get sc (storage class)
+# my-sc
+
+    apiVersion: storage.kos.io/v1
+    kind: storageClass
+    metadata:
+      name: my-sc
+    provisioner: pd.csi.storage.gke.io
+    volumeBindingMode: waitForFirstConsumer
+    allowVolumeExpansion: true
+    parameters:
+      type: pd-standard
+
+# kubectl apply -f my-sc.yaml
+
+# my-pvc.yaml
+    apiVersion: v1
+    kind: apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: my-pvc
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: my-sc
+      resources:
+        requests:
+          storage: 3Gi
+
+# kubectl apply
+
+# nginx-csi.yaml
+
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx-csi 
+    spec:
+      containers:
+      - name: nginx-csi
+        image: nginx 
+        volumeMounts:
+          - mountPath: /var/lib/www/html 
+            name: my-vol 
+      volumes: 
+        - name: my-vol 
+          apiVersion: v1
+          PersistentVolumeClaim:
+            claimName: my-pvc 
+            readOnly: false 
+
+# kubectl apply
+
+# gcp logs
