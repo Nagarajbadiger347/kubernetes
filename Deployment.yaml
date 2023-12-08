@@ -1,0 +1,665 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu-yaml-def
+spec:
+  containers:
+  - name: ubuntu-yaml-cont
+    image: ubuntu:latest
+    command: ["/bin/sleep","3600d"]
+  restartPolicy: Always
+
+---
+# kubectl create namespace ns-deploy
+# kubectl create deployment deploy-nginx --image-nginx:latest --namespace ns-deploy
+# kubectl scale deployment deploy-nginx --replicas 5 -n ns-deploy
+# kubectl edit deployments.apps deploy-nginx -n ns-deploy
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploy-nginx
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: deployed
+  template:
+    metadata:
+      labels:
+        app: deployed
+    spec:
+      containers:
+      - name: deploy-nginx-contaainer
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+
+# kubectl apply -f deployment.yaml
+# kubectl describe deployments <name of deployment>
+---
+apiVersion: apps/v1
+kind: apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb-container 
+        image: mongodb
+        ports:
+        - name: mongodb-port
+          containerPort: 27017
+          protocol: TCP
+
+# kubectl apply -f mongodb.yaml
+# kubectl get deployments
+# kubectl get pods -l apps: mongodb
+# kubectl scale --replicas=3 deployment/mongodb <to scale down the deployment>
+
+--- #httpd.yaml
+
+apiVersion: apps/v1
+kind: apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+      - name: httpd-container
+        image: httpd
+        ports:
+        - name: httpd-port 
+          containerPort: 80
+          protocol: TCP
+
+# kubectl apply -f httpd.yaml
+# kubectl get deployments httpd
+# kubectl get pods -l app=httpd
+# kubectl edit deployment httpd <change the values of maxsurge and max unavailable to 75% and 50%>
+# (kubectl get deployments httpd -o yaml | grep maxUnavailable) && (kubectl get deployments httpd -o yaml | grep maxSurge)
+
+--- # nodejs.yaml
+
+apiVersion: apps/v1
+  template:
+    metadata:
+      labels:
+        app: nodejs
+    spec:
+      containers:
+      - name: nodejs-container
+        image: node:19-buster
+        ports:
+        - containerPort: 8081
+
+# kubectl apply -f nodejs.yaml
+# kubectl get deployments nodejs
+# kubectl set image deployment/nodejs nodejs-container=node:19-bullseye
+# kubectl describe deployments nodejs
+
+
+--- # ubuntu-versions.yaml
+
+apiVersion: apps/v1
+kind: deployment
+metadata: 
+  name: ubuntu-svr
+
+spec: 
+  replicas: 2
+  selector:
+    matchLabels: 
+      app: ubuntu-ver
+  template:
+    metadata:
+      labels:
+        app: ubuntu-ver
+    spec:
+      containers:
+      - name: ubuntu-ver-container
+        image: ubuntu:20.04
+        command: ["sleep", "123456"]
+
+
+# kubectl apply -f ubuntu-versions.yaml
+# kubectl get deployments ubuntu-ver
+# kubectl set image deployment/ubuntu-ver ubuntu-ver-container=ubuntu:22.04 --record
+# kubectl set image deployment/ubuntu-ver ubuntu-ver-container=ubuntu:18.04 --record
+# kubectl set image deployment/ubuntu-ver ubuntu-ver-container=ubuntu:20.04 --record
+# kubectl rollout history deployment/ubuntu-ver > ubuntu-versions.txt
+# cat ubuntu-versions.txt
+
+
+# kubectl get dpeloyments
+# kubectl get deployments -o 'custom-columns=NAME:.metadata.name,STRATEGY:.spec.strategy.type' > strategies.txt
+# cat strategies.txt
+
+--- # mkdir nginx && cd nginx, vim nginx-rolling.yaml
+
+apiVersion: apps/v1
+kind: deployment
+metadata:
+  name: nginx-rolling
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-rolling
+  template:
+    metadata:
+      labels:
+        app: nginx-rolling
+    spec:
+      containers:
+        - name: nginx-rolling-container
+          image: nginx:latest
+          ports:
+          - containerPort: 80
+
+--- # vim nginx-recreate.yaml
+
+apiVersion: apps/v1
+kind: deployment
+metadata:
+  name: nginx-recreate
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nginx-recreate
+  template:
+    metadata:
+      labels:
+        app: nginx-recreate
+    spec:
+      containers:
+        - name: nginx-recreate-container
+          image: nginx:latest
+          ports:
+          - containerPort: 80
+
+# kubectl apply -f . (Create both the deployments)
+# kubectl get deployments nginx-rolling nginx-recreate
+# kubectl set image deployment/nginx-rolling-container=nginx:stable-alpine --record
+# kubectl set image deployment/nginx-recreate nginx-recreate-container=nginx:perl --record
+# kubectl get events | grep deployment/nginx-rolling > dep-events.txt
+# kubectl get events | grep deployment/nginx-recreate >> dep-events.txt
+# kubectl rollout undo command
+
+--- # DaemonSet
+# fluentd.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+   namespace: kube-system
+   labels:
+     app: fluentd
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  template:
+    metadata: 
+      labeles:
+        app: fluentd
+    spec:
+      containers:
+      - name: fluentd
+        image: fluentd:latest
+
+
+# kubectl apply -f fluentd.yaml
+# kubectl get daemonsets -n kube-system
+# kubectl get pods -l app=fluentd -n kube-system -o wide
+
+
+
+--- #  busybox-daemon.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: busybox-daemon
+   labels:
+     app: bb-daemon
+spec:
+   selector:
+     matchLabels:
+      app: bb-daemon
+   template:
+     metadata:
+       labels:
+         app: bb-daemon
+     spec:
+       containers:
+       - name: busybox-daemon-container
+         image: busybox:latest
+         command: ["sleep", "3600"]
+
+# kubectl apply -f busybox-daemon.yaml
+# kubectl get daemonsets
+# kubectl get pods -l app=bb-daemon
+# kubectl edit pod <pod name> (edit app=bb-old-daemon)
+# kubectl get pods -l app=bb-daemon
+# kubectl get pods -l app=bb-old-daemon
+
+--- # logstash.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: logstash
+  labels:
+    app: logstash
+spec:
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash-container
+        image: logstash:latest
+        command: ['logstash']
+
+# kubectl apply -f logstash.yaml
+# kubectl get daemonsets logstash
+# kubectl get pods -l app=logstash -o wide
+
+
+--- # busy-job.yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: busy-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: busy-job-container
+        image: busybox:latest
+        command: ["sh", "-c", "echo i was here"]
+      restartPOlicy: Never
+  backoffLimit: 4
+
+
+# kubectl apply -f busy-job.yaml
+# kubectl get job
+# kubectl get pods busy-job-
+# kubectl logs <pod name>
+
+
+--- # pi-job.yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-timetolive-job
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      containers:
+      - name: pi-timetolive-container
+        image: perl:5.34.0
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPOlicy: Never
+  
+# kubectl apply -f pi-job.yaml
+# kubectl get jobs pi-timetolive-job
+# kubectl get pods pi-timetolive-
+# kubectl logs <pod name>
+# kubectl get pods <pod name> -w
+# kubectl get jobs pi-timetolive-job (u wont be able to fine=d the pi-timetolive-job resource)
+
+
+--- #cron jobs
+
+# kubectl get cronjobs 
+# kubectl edit cronjob <name>  (Edit the object definition YAML of busy-cronjob to change the restartPolicy from “OnFailure” to “Never”)
+# kubectl get cronjobs <name> -o yaml | grep restartPolicy
+apiVersion: batch/v1
+kind: cronjob
+metadata:
+  name: my-cronjob
+
+spec:   
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec: 
+          containers:
+          - name: cronjob-container
+            image: busybox:1.28
+            command:
+            - /bin/sh
+            - -c
+            - date; echo Good Job!!!
+          restartPolicy: OnFailure
+
+
+# kubectl apply -f cron-job.yaml
+# kubectl get cronjobs --watch
+# kubectl logs <name>
+# kubectl get jobs --watch
+
+
+# (Use the custom columns to get the names and apiVersions of CronJobs and Jobs. Save the results in a text file. Use >> to append the text in an existing file)
+#kubectl get cronjobs -o 'custom-columns=NAME:.metadata.name,API:.apiVersion' > version-list.txt
+#kubectl get jobs -o 'custom-columns=NAME:.metadata.name,API:.apiVersion' >> version-list.txt
+kind: Deployment
+metadata:
+  name: nodejs
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodejs
+  template:
+    metadata:
+      labels:
+        app: nodejs
+    spec:
+      containers:
+      - name: nodejs-container
+        image: node:19-buster
+        ports:
+        - containerPort: 8081
+
+# kubectl apply -f nodejs.yaml
+# kubectl get deployments nodejs
+# kubectl set image deployment/nodejs nodejs-container=node:19-bullseye
+# kubectl describe deployments nodejs
+
+
+--- # ubuntu-versions.yaml
+
+apiVersion: apps/v1
+kind: deployment
+metadata: 
+  name: ubuntu-svr
+
+spec: 
+  replicas: 2
+  selector:
+    matchLabels: 
+      app: ubuntu-ver
+  template:
+    metadata:
+      labels:
+        app: ubuntu-ver
+    spec:
+      containers:
+      - name: ubuntu-ver-container
+        image: ubuntu:20.04
+        command: ["sleep", "123456"]
+
+
+# kubectl apply -f ubuntu-versions.yaml
+# kubectl get deployments ubuntu-ver
+# kubectl set image deployment/ubuntu-ver ubuntu-ver-container=ubuntu:22.04 --record
+# kubectl set image deployment/ubuntu-ver ubuntu-ver-container=ubuntu:18.04 --record
+# kubectl set image deployment/ubuntu-ver ubuntu-ver-container=ubuntu:20.04 --record
+# kubectl rollout history deployment/ubuntu-ver > ubuntu-versions.txt
+# cat ubuntu-versions.txt
+
+
+# kubectl get dpeloyments
+# kubectl get deployments -o 'custom-columns=NAME:.metadata.name,STRATEGY:.spec.strategy.type' > strategies.txt
+# cat strategies.txt
+
+--- # mkdir nginx && cd nginx, vim nginx-rolling.yaml
+
+apiVersion: apps/v1
+kind: deployment
+metadata:
+  name: nginx-rolling
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-rolling
+  template:
+    metadata:
+      labels:
+        app: nginx-rolling
+    spec:
+      containers:
+        - name: nginx-rolling-container
+          image: nginx:latest
+          ports:
+          - containerPort: 80
+
+--- # vim nginx-recreate.yaml
+
+apiVersion: apps/v1
+kind: deployment
+metadata:
+  name: nginx-recreate
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nginx-recreate
+  template:
+    metadata:
+      labels:
+        app: nginx-recreate
+    spec:
+      containers:
+        - name: nginx-recreate-container
+          image: nginx:latest
+          ports:
+          - containerPort: 80
+
+# kubectl apply -f . (Create both the deployments)
+# kubectl get deployments nginx-rolling nginx-recreate
+# kubectl set image deployment/nginx-rolling-container=nginx:stable-alpine --record
+# kubectl set image deployment/nginx-recreate nginx-recreate-container=nginx:perl --record
+# kubectl get events | grep deployment/nginx-rolling > dep-events.txt
+# kubectl get events | grep deployment/nginx-recreate >> dep-events.txt
+# kubectl rollout undo command
+
+--- # DaemonSet
+# fluentd.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+   namespace: kube-system
+   labels:
+     app: fluentd
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  template:
+    metadata: 
+      labeles:
+        app: fluentd
+    spec:
+      containers:
+      - name: fluentd
+        image: fluentd:latest
+
+
+# kubectl apply -f fluentd.yaml
+# kubectl get daemonsets -n kube-system
+# kubectl get pods -l app=fluentd -n kube-system -o wide
+
+
+
+--- #  busybox-daemon.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: busybox-daemon
+   labels:
+     app: bb-daemon
+spec:
+   selector:
+     matchLabels:
+      app: bb-daemon
+   template:
+     metadata:
+       labels:
+         app: bb-daemon
+     spec:
+       containers:
+       - name: busybox-daemon-container
+         image: busybox:latest
+         command: ["sleep", "3600"]
+
+# kubectl apply -f busybox-daemon.yaml
+# kubectl get daemonsets
+# kubectl get pods -l app=bb-daemon
+# kubectl edit pod <pod name> (edit app=bb-old-daemon)
+# kubectl get pods -l app=bb-daemon
+# kubectl get pods -l app=bb-old-daemon
+
+--- # logstash.yaml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: logstash
+  labels:
+    app: logstash
+spec:
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      containers:
+      - name: logstash-container
+        image: logstash:latest
+        command: ['logstash']
+
+# kubectl apply -f logstash.yaml
+# kubectl get daemonsets logstash
+# kubectl get pods -l app=logstash -o wide
+
+
+--- # busy-job.yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: busy-job
+spec:
+  template:
+    spec:
+      containers:
+      - name: busy-job-container
+        image: busybox:latest
+        command: ["sh", "-c", "echo i was here"]
+      restartPOlicy: Never
+  backoffLimit: 4
+
+
+# kubectl apply -f busy-job.yaml
+# kubectl get job
+# kubectl get pods busy-job-
+# kubectl logs <pod name>
+
+
+--- # pi-job.yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi-timetolive-job
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      containers:
+      - name: pi-timetolive-container
+        image: perl:5.34.0
+        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+      restartPOlicy: Never
+  
+# kubectl apply -f pi-job.yaml
+# kubectl get jobs pi-timetolive-job
+# kubectl get pods pi-timetolive-
+# kubectl logs <pod name>
+# kubectl get pods <pod name> -w
+# kubectl get jobs pi-timetolive-job (u wont be able to fine=d the pi-timetolive-job resource)
+
+
+--- #cron jobs
+
+# kubectl get cronjobs 
+# kubectl edit cronjob <name>  (Edit the object definition YAML of busy-cronjob to change the restartPolicy from “OnFailure” to “Never”)
+# kubectl get cronjobs <name> -o yaml | grep restartPolicy
+apiVersion: batch/v1
+kind: cronjob
+metadata:
+  name: my-cronjob
+
+spec:   
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec: 
+          containers:
+          - name: cronjob-container
+            image: busybox:1.28
+            command:
+            - /bin/sh
+            - -c
+            - date; echo Good Job!!!
+          restartPolicy: OnFailure
+
+
+# kubectl apply -f cron-job.yaml
+# kubectl get cronjobs --watch
+# kubectl logs <name>
+# kubectl get jobs --watch
+
+
+# (Use the custom columns to get the names and apiVersions of CronJobs and Jobs. Save the results in a text file. Use >> to append the text in an existing file)
+#kubectl get cronjobs -o 'custom-columns=NAME:.metadata.name,API:.apiVersion' > version-list.txt
+#kubectl get jobs -o 'custom-columns=NAME:.metadata.name,API:.apiVersion' >> version-list.txt
+
+
+
