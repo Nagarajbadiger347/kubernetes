@@ -35,6 +35,7 @@ Downloading and Installation of runc (it is low-level container runtime that imp
     sudo mkdir -p /opt/cni/bin
 Downloading installing cni plugins
 
+
     sudo wget https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-arm-v1.3.0.tgz
     sudo tar Cxzvf /opt/cni/bin cni-plugins-linux-arm-v1.3.0.tgz
     sudo apt update
@@ -45,9 +46,9 @@ Installing the dependencies which are required to run the container
     curl \
     gnupg \
     lsb-release
-Downloading gpg keys  
+Downloading gpg keys
 
-    sudo mkdir -p /etc/apt/keyrings
+    sudo mkdir -m 755 /etc/apt/keyrings
     
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
@@ -85,18 +86,19 @@ To check containerd installed properly use
  
     sudo ctr --help
 
+# Update the apt package index and install packages needed to use the Kubernetes apt repository:
     sudo apt-get update
+    sudo apt-get install -y apt-transport-https ca-certificates curl gpg
     
- Download apt-key
- 
-    sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+# Download apt-key
+     curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-    echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list 
-
+# Add the appropriate Kubernetes apt repository.
+    echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+# Update the apt package index, install kubelet, kubeadm and kubectl, and pin their version:
     sudo apt-get update
-Installation of kubelet, kubeadm, kubectl
-
     sudo apt-get install -y kubelet kubeadm kubectl
+    sudo apt-mark hold kubelet kubeadm kubectl
 (kubectl is the k8s command line,whereas kubeadm is the cluster bootstrapping and management agent)
 
 # Spinning up the K8s cluster
@@ -137,3 +139,7 @@ bashrc stands for "bash run commands" it is a collection of instructions given t
     exit 
     kubectl get nodes -o wide
     
+---
+
+
+
