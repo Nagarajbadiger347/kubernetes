@@ -26,8 +26,8 @@ Cluster wide network overlay is a virtual network for the containers created wit
     sudo sysctl --system
 Download Containerd for github repo
 
-    wget https://github.com/containerd/containerd/releases/download/v1.6.8/containerd-1.6.8-linux-amd64.tar.gz
-    sudo tar Cxzvf /usr/local containerd-1.6.8-linux-amd64.tar.gz
+    wget https://github.com/containerd/containerd/releases/download/v1.7.11/containerd-1.7.11-linux-amd64.tar.gz
+    sudo tar Cxzvf /usr/local containerd-1.7.11-linux-amd64.tar.gz
 Downloading and Installation of runc (it is low-level container runtime that implements the OCI specification)
 
     sudo wget https://github.com/opencontainers/runc/releases/download/v1.1.3/runc.amd64
@@ -55,6 +55,14 @@ Downloading gpg keys
     echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
     $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# or you edit manually the docker.list file 
+    sudo nano /etc/apt/sources.list.d/docker.list
+
+Add the following line to the file:
+
+    deb [signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable
+# update and install containerd
 
     sudo apt-get update
 Installation of containerd 
